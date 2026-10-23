@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proyección Consolidada de Ingresos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0e14;
+            color: #ffffff;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 flex flex-col justify-center items-center">
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-6xl space-y-6">
+        
+        <!-- Encabezado de la Sección -->
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-[#00E5FF] tracking-tight">
+                Proyección consolidada de ingresos
+            </h1>
+            <p class="text-gray-400 text-sm sm:text-base mt-1">
+                Revenue incremental proyectado a 3 años por línea de producto.
+            </p>
+        </div>
+
+        <!-- Tarjeta del Gráfico -->
+        <div class="bg-[#12161f] border border-gray-800 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
+            
+            <!-- Título del Gráfico y Leyendas -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                <h2 class="text-sm font-semibold text-gray-200">
+                    Ingresos por línea de producto (USD miles)
+                </h2>
+
+                <!-- Leyenda de Productos -->
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-300">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-[#00E5FF] shadow-[0_0_8px_#00E5FF]"></span>
+                        <span>Benchmarking</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-[#FFB300] shadow-[0_0_8px_#FFB300]"></span>
+                        <span>Alertas predictivas</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-[#9D4EDD] shadow-[0_0_8px_#9D4EDD]"></span>
+                        <span>Suscripción SaaS</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-[#E056FD] shadow-[0_0_8px_#E056FD]"></span>
+                        <span>API B2B</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-[#70E000] shadow-[0_0_8px_#70E000]"></span>
+                        <span>ESG y trazabilidad</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas Container de la Animación -->
+            <div class="relative w-full h-[380px] sm:h-[450px]">
+                <canvas id="revenueChart" class="w-full h-full block"></canvas>
+
+                <!-- Tooltip dinámico -->
+                <div id="tooltip" class="absolute hidden bg-gray-900/90 backdrop-blur border border-gray-700 text-xs text-white p-3 rounded-lg shadow-xl pointer-events-none transition-all duration-150 z-20">
+                    <div id="tooltip-year" class="font-bold text-cyan-400 mb-1"></div>
+                    <div id="tooltip-content" class="space-y-1"></div>
+                </div>
+            </div>
+
+            <!-- Panel de Control y Estado -->
+            <div class="mt-6 pt-4 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-4 text-xs text-gray-400">
+                <!-- Botones de Control -->
+                <div class="flex items-center gap-3">
+                    <button id="playPauseBtn" class="px-4 py-2 bg-[#00E5FF] hover:bg-[#00c2da] text-gray-950 font-bold rounded-lg transition-colors flex items-center gap-2 shadow-[0_0_12px_rgba(0,229,255,0.3)]">
+                        <svg id="playIcon" class="w-4 h-4 fill-current hidden" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="pauseIcon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        <span id="playPauseText">Pausar</span>
+                    </button>
+
+                    <button id="restartBtn" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 border border-gray-700">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                        <span>Reiniciar</span>
+                    </button>
+                </div>
+
+                <!-- Barra de Progreso y Velocidad -->
+                <div class="flex items-center gap-4 flex-1 max-w-md">
+                    <span class="whitespace-nowrap font-medium">Progreso:</span>
+                    <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                        <div id="progressBar" class="bg-[#00E5FF] h-full w-0 transition-all duration-75"></div>
+                    </div>
+                </div>
+
+                <!-- Velocidad -->
+                <div class="flex items-center gap-2">
+                    <span>Velocidad:</span>
+                    <select id="speedSelect" class="bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1 focus:outline-none focus:border-[#00E5FF]">
+                        <option value="0.5">0.5x</option>
+                        <option value="1" selected>1.0x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2.0x</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script de Animación y Gráficos -->
+    <script>
+        window.onload = function() {
+            const canvas = document.getElementById('revenueChart');
+            const ctx = canvas.getContext('2d');
+            const progressBar = document.getElementById('progressBar');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const playPauseText = document.getElementById('playPauseText');
+            const playIcon = document.getElementById('playIcon');
+            const pauseIcon = document.getElementById('pauseIcon');
+            const restartBtn = document.getElementById('restartBtn');
+            const speedSelect = document.getElementById('speedSelect');
+            const tooltip = document.getElementById('tooltip');
+            const tooltipYear = document.getElementById('tooltip-year');
+            const tooltipContent = document.getElementById('tooltip-content');
+
+            // Datos extraídos de la imagen original
+            const datasets = [
+                {
+                    name: 'Benchmarking',
+                    color: '#00E5FF',
+                    values: [90, 380, 600] // Año 1, Año 2, Año 3 en miles
+                },
+                {
+                    name: 'API B2B',
+                    color: '#E056FD',
+                    values: [80, 300, 580]
+                },
+                {
+                    name: 'Suscripción SaaS',
+                    color: '#9D4EDD',
+                    values: [90, 340, 480]
+                },
+                {
+                    name: 'ESG y trazabilidad',
+                    color: '#70E000',
+                    values: [20, 160, 420]
+                },
+                {
+                    name: 'Alertas predictivas',
+                    color: '#FFB300',
+                    values: [60, 220, 375]
+                }
+            ];
+
+            const years = ['Año 1', 'Año 2', 'Año 3'];
+            const maxVal = 600; // $600K
+            const yLabels = ['$0K', '$100K', '$200K', '$300K', '$400K', '$500K', '$600K'];
+
+            // Variables de Control de Animación
+            let progress = 0; // 0 a 1 (donde 0 es inicio y 1 es final de la animación)
+            let animationDuration = 4000; // 4 segundos base
+            let isPlaying = true;
+            let lastTimestamp = null;
+            let animationFrameId = null;
+            let speedMultiplier = 1;
+
+            // Ajuste del Canvas para Alta Resolución (DPI)
+            function resizeCanvas() {
+                const rect = canvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                draw(progress);
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+
+            // Coordenadas calculadas
+            function getLayout() {
+                const rect = canvas.getBoundingClientRect();
+                const width = rect.width;
+                const height = rect.height;
+
+                const padding = {
+                    left: 60,
+                    right: 30,
+                    top: 20,
+                    bottom: 40
+                };
+
+                const graphWidth = width - padding.left - padding.right;
+                const graphHeight = height - padding.top - padding.bottom;
+
+                // X para cada año
+                const xCoords = [
+                    padding.left,
+                    padding.left + graphWidth / 2,
+                    padding.left + graphWidth
+                ];
+
+                return { width, height, padding, graphWidth, graphHeight, xCoords };
+            }
+
+            // Convertir Valor numérico a Posición Y en el canvas
+            function valueToY(val, layout) {
+                const ratio = val / maxVal;
+                return layout.height - layout.padding.bottom - (ratio * layout.graphHeight);
+            }
+
+            // Función Principal de Renderizado
+            function draw(prog) {
+                const layout = getLayout();
+                ctx.clearRect(0, 0, layout.width, layout.height);
+
+                // 1. DIBUJAR LÍNEAS DE CUADRÍCULA Y EJES Y
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+                ctx.fillStyle = '#6B7280';
+                ctx.font = '12px Inter, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+
+                const stepY = layout.graphHeight / (yLabels.length - 1);
+                yLabels.forEach((label, i) => {
+                    const y = layout.height - layout.padding.bottom - (i * stepY);
+                    
+                    // Línea horizontal
+                    ctx.beginPath();
+                    ctx.moveTo(layout.padding.left, y);
+                    ctx.lineTo(layout.width - layout.padding.right, y);
+                    ctx.stroke();
+
+                    // Etiqueta Eje Y
+                    ctx.fillText(label, layout.padding.left - 12, y);
+                });
+
+                // 2. DIBUJAR LÍNEAS VERTICALES DE LOS AÑOS Y EJE X
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+
+                layout.xCoords.forEach((x, i) => {
+                    // Línea vertical
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                    ctx.moveTo(x, layout.padding.top);
+                    ctx.lineTo(x, layout.height - layout.padding.bottom);
+                    ctx.stroke();
+
+                    // Etiqueta Eje X
+                    ctx.fillStyle = '#9CA3AF';
+                    ctx.fillText(years[i], x, layout.height - layout.padding.bottom + 12);
+                });
+
+                // 3. DIBUJAR ÁREAS Y LÍNEAS DE MODELOS CON ANIMACIÓN
+                // Progreso escalado de 0 a 2 (correspondiente a los 2 segmentos entre los 3 años)
+                const currentSegmentProgress = prog * 2; 
+
+                datasets.forEach(ds => {
+                    const y0 = valueToY(ds.values[0], layout);
+                    const y1 = valueToY(ds.values[1], layout);
+                    const y2 = valueToY(ds.values[2], layout);
+
+                    const x0 = layout.xCoords[0];
+                    const x1 = layout.xCoords[1];
+                    const x2 = layout.xCoords[2];
+
+                    // Calcular punto actual final del trazo animado
+                    let currentX, currentY;
+                    if (currentSegmentProgress <= 1) {
+                        // Animando entre Año 1 y Año 2
+                        currentX = x0 + (x1 - x0) * currentSegmentProgress;
+                        currentY = y0 + (y1 - y0) * currentSegmentProgress;
+                    } else {
+                        // Animando entre Año 2 y Año 3
+                        const subProg = currentSegmentProgress - 1;
+                        currentX = x1 + (x2 - x1) * subProg;
+                        currentY = y1 + (y2 - y1) * subProg;
+                    }
+
+                    // A) Sombra/Relleno degradado bajo la curva
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(x0, layout.height - layout.padding.bottom);
+                    ctx.lineTo(x0, y0);
+
+                    if (currentSegmentProgress <= 1) {
+                        ctx.lineTo(currentX, currentY);
+                        ctx.lineTo(currentX, layout.height - layout.padding.bottom);
+                    } else {
+                        ctx.lineTo(x1, y1);
+                        ctx.lineTo(currentX, currentY);
+                        ctx.lineTo(currentX, layout.height - layout.padding.bottom);
+                    }
+                    ctx.closePath();
+
+                    // Crear Degradado Transparente
+                    const gradient = ctx.createLinearGradient(0, layout.padding.top, 0, layout.height - layout.padding.bottom);
+                    gradient.addColorStop(0, ds.color + '25'); // 15% opacidad
+                    gradient.addColorStop(1, ds.color + '00'); // 0% opacidad
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    ctx.restore();
+
+                    // B) Dibujar Trazo de Línea Creciente
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = ds.color;
+                    ctx.shadowColor = ds.color;
+                    ctx.shadowBlur = 8; // Efecto Neón
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+
+                    ctx.moveTo(x0, y0);
+                    if (currentSegmentProgress <= 1) {
+                        ctx.lineTo(currentX, currentY);
+                    } else {
+                        ctx.lineTo(x1, y1);
+                        ctx.lineTo(currentX, currentY);
+                    }
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // C) Dibujar Puntos de Datos (Nodos)
+                    // Punto Año 1 (Siempre visible)
+                    drawDataPoint(ctx, x0, y0, ds.color);
+
+                    // Punto Año 2 (Aparece al llegar al Año 2)
+                    if (currentSegmentProgress >= 1) {
+                        drawDataPoint(ctx, x1, y1, ds.color);
+                    }
+
+                    // Punto Año 3 (Aparece al llegar al Año 3)
+                    if (currentSegmentProgress >= 2) {
+                        drawDataPoint(ctx, x2, y2, ds.color);
+                    }
+
+                    // Punto de Cabeza Creciente (Sigue la punta de la línea)
+                    if (prog > 0 && prog < 1) {
+                        drawDataPoint(ctx, currentX, currentY, '#ffffff', ds.color, 5);
+                    }
+                });
+            }
+
+            // Función Auxiliar para Dibujar Nodos/Puntos
+            function drawDataPoint(ctx, x, y, strokeColor, fillColor = '#12161f', radius = 4.5) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = strokeColor; // Relleno sólido como en la imagen
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#12161f';
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Bucle del Animador (RequestAnimationFrame)
+            function animate(timestamp) {
+                if (!lastTimestamp) lastTimestamp = timestamp;
+                const deltaTime = timestamp - lastTimestamp;
+                lastTimestamp = timestamp;
+
+                if (isPlaying) {
+                    progress += (deltaTime / animationDuration) * speedMultiplier;
+
+                    if (progress >= 1) {
+                        progress = 1;
+                        isPlaying = false;
+                        updatePlayButton();
+                    }
+
+                    // Actualizar Barra de Progreso
+                    progressBar.style.width = `${progress * 100}%`;
+                }
+
+                draw(progress);
+
+                if (isPlaying || progress < 1) {
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+            }
+
+            // Controles de Animación
+            function togglePlay() {
+                isPlaying = !isPlaying;
+                if (isPlaying) {
+                    if (progress >= 1) progress = 0; // Reiniciar si terminó
+                    lastTimestamp = performance.now();
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+                updatePlayButton();
+            }
+
+            function updatePlayButton() {
+                if (isPlaying) {
+                    playIcon.classList.add('hidden');
+                    pauseIcon.classList.remove('hidden');
+                    playPauseText.textContent = 'Pausar';
+                } else {
+                    playIcon.classList.remove('hidden');
+                    pauseIcon.classList.add('hidden');
+                    playPauseText.textContent = 'Reproducir';
+                }
+            }
+
+            function restart() {
+                progress = 0;
+                isPlaying = true;
+                lastTimestamp = performance.now();
+                updatePlayButton();
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            // Event Listeners para Controles
+            playPauseBtn.addEventListener('click', togglePlay);
+            restartBtn.addEventListener('click', restart);
+
+            speedSelect.addEventListener('change', (e) => {
+                speedMultiplier = parseFloat(e.target.value);
+            });
+
+            // INTERACTIVIDAD (HOVER Y TOOLTIP)
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const layout = getLayout();
+
+                // Detectar año más cercano
+                let closestIndex = -1;
+                let minDistance = Infinity;
+
+                layout.xCoords.forEach((x, idx) => {
+                    const dist = Math.abs(mouseX - x);
+                    if (dist < 40 && dist < minDistance) {
+                        minDistance = dist;
+                        closestIndex = idx;
+                    }
+                });
+
+                // Solo mostrar tooltip si el punto actual de animación ha alcanzado ese año
+                const currentYearReached = progress * 2;
+
+                if (closestIndex !== -1 && closestIndex <= currentYearReached) {
+                    tooltipYear.textContent = years[closestIndex];
+                    tooltipContent.innerHTML = '';
+
+                    // Ordenar datasets de mayor a menor para este año
+                    const sortedData = [...datasets].sort((a, b) => b.values[closestIndex] - a.values[closestIndex]);
+
+                    sortedData.forEach(ds => {
+                        const row = document.createElement('div');
+                        row.className = 'flex items-center justify-between gap-4';
+                        row.innerHTML = `
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full" style="background-color: ${ds.color}"></span>
+                                <span class="text-gray-300">${ds.name}</span>
+                            </div>
+                            <span class="font-semibold text-white">$${ds.values[closestIndex]}K</span>
+                        `;
+                        tooltipContent.appendChild(row);
+                    });
+
+                    // Posicionar Tooltip
+                    const tooltipX = layout.xCoords[closestIndex];
+                    tooltip.style.left = `${Math.min(tooltipX + 15, rect.width - 180)}px`;
+                    tooltip.style.top = `${mouseY - 20}px`;
+                    tooltip.classList.remove('hidden');
+                } else {
+                    tooltip.classList.add('hidden');
+                }
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                tooltip.classList.add('hidden');
+            });
+
+            // Inicialización de Pantalla y Primer Frame
+            resizeCanvas();
+            animationFrameId = requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>
